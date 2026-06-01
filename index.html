@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Persistent 2FA Layout</title>
+
+<style>
+body{
+  font-family: Arial, sans-serif;
+  background:#111;
+  color:#fff;
+  display:flex;
+  justify-content:center;
+  padding:20px;
+  margin:0;
+}
+
+*{ box-sizing:border-box; }
+
+.box{
+  width:90%;
+  max-width:460px;
+  background:#222;
+  padding:20px;
+  border-radius:15px;
+  box-shadow:0 0 20px cyan;
+}
+
+/* LOCK BUTTON */
+.loginToggle{
+  width:75px;
+  height:75px;
+  margin:0 auto 15px;
+  border-radius:50%;
+  background:linear-gradient(135deg,#00ffff,#00aaff);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:38px;
+  cursor:pointer;
+}
+
+/* TITLE */
+h2{text-align:center;color:#00ffff;}
+
+/* INPUTS */
+input{
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:none;
+  margin:10px 0;
+  font-size:15px;
+  background:#fff;
+  color:#000;
+}
+
+input:disabled{
+  background:#000;
+  color:#00ffff;
+  border:1px solid #00ffff;
+  -webkit-text-fill-color:#00ffff;
+}
+
+/* ERROR */
+.error{
+  border:2px solid red !important;
+}
+
+/* ROW (NAME + PASSWORD SAME LINE) */
+.row{
+  display:flex;
+  gap:20px;
+}
+
+.row input{flex:1;}
+
+/* STATUS */
+#uidStatus{
+  margin-top:8px;
+  font-weight:bold;
+  color:#00ffcc;
+}
+
+/* BUTTONS */
+.btnRow{
+  display:flex;
+  gap:25px;
+  margin:20px 0;
+}
+
+.btnRow button{
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  background:cyan;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.hidden{display:none;}
+
+/* SUBMIT */
+#submitBtn{
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  background:cyan;
+  border:none;
+  font-weight:bold;
+}
+
+.disabled{
+  opacity:.5;
+  pointer-events:none;
+}
+
+/* TOAST */
+.toast{
+  position:fixed;
+  top:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:cyan;
+  color:black;
+  padding:10px 20px;
+  border-radius:10px;
+  opacity:0;
+}
+
+.toast.show{
+  opacity:1;
+  top:40px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+
+<div class="loginToggle" onclick="toggleLogin()">🔐</div>
+
+<h2>Normal Sign up</h2>
+
+<div class="row">
+  <input id="studentid" placeholder="Name & Student ID">
+  <input id="password" placeholder="Password">
+</div>
+
+<input id="uid" placeholder="Enter UID (14 digits)">
+<div id="uidStatus"></div>
+
+<div class="btnRow hidden" id="actionButtons">
+  <button onclick="copyMail()">Add Mail</button>
+  <button onclick="copyFull()">Full Token</button>
+</div>
+
+<input id="twofa" placeholder="Two Factor (2FA)">
+
+<button id="submitBtn" onclick="finalSubmit()">Submit Now</button>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+
+const URL="https://script.google.com/macros/s/AKfycbzmsgFhqapIZXQNL8zHh3kg2jTmU5PV6zExfLcR7uVQnQCz6rde_CMb-dXQgtwD3xmkbA/exec";
+
+let currentRow=0;
+let eValueGlobal="";
+let loginLocked=false;
+
+/* TOAST */
+function showToast(msg){
+  const t=document.getElementById("toast");
+  t.innerText=msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),1500);
+}
+
+/* LOAD STATE */
+window.addEventListener("load",()=>{
+  // শুধুমাত্র studentid এবং password সেভ হবে
+  document.getElementById("studentid").value=localStorage.getItem("studentid")||"";
+  document.getElementById("password").value=localStorage.getItem("password")||"";
+
+  loginLocked = localStorage.getItem("loginLocked")==="true";
+  applyLock();
+});
+
+/* SAVE INPUTS */
+document.getElementById("studentid").addEventListener("input",e=>{
+  localStorage.setItem("studentid",e.target.value);
+});
+
+document.getElementById("password").addEventListener("input",e=>{
+  localStorage.setItem("password",e.target.value);
+});
+
+/* UID ONLY NUMBERS */
+document.getElementById("uid").addEventListener("input",function(){
+  let digits=this.value.replace(/\D/g,'').slice(0,14);
+  this.value=digits;
+
+  if(digits.length===14) verifyUID(digits);
+});
+
+/* LOCK FIX */
+function toggleLogin(){
+  loginLocked=!loginLocked;
+  localStorage.setItem("loginLocked", loginLocked ? "true" : "false");
+  applyLock();
+  showToast(loginLocked ? "Locked 🔐" : "Unlocked 🔓");
+}
+
+function applyLock(){
+  const s=document.getElementById("studentid");
+  const p=document.getElementById("password");
+
+  s.disabled=loginLocked;
+  p.disabled=loginLocked;
+
+  s.style.opacity = loginLocked ? "0.6" : "1";
+  p.style.opacity = loginLocked ? "0.6" : "1";
+}
+
+/* VERIFY UID */
+async function verifyUID(uid){
+
+  document.getElementById("uidStatus").innerText="Verifying...";
+
+  const form=new FormData();
+  form.append("step","verify");
+  form.append("uid",uid);
+  form.append("studentid",document.getElementById("studentid").value);
+  form.append("password",document.getElementById("password").value);
+
+  try{
+    const res=await fetch(URL,{method:"POST",body:form});
+    const data=await res.json();
+
+    if(data.status==="ALREADY"){
+      document.getElementById("uidStatus").innerText="❌ Already Submitted";
+      showToast("Already Submitted");
+      return;
+    }
+
+    currentRow=data.row;
+    eValueGlobal=data.eValue;
+
+    document.getElementById("uidStatus").innerText="✅ Verified";
+    document.getElementById("actionButtons").classList.remove("hidden");
+
+  }catch(e){
+    document.getElementById("uidStatus").innerText="Already Submitted";
+  }
+}
+
+/* COPY */
+function copyMail(){
+  navigator.clipboard.writeText(eValueGlobal.split("|")[0]);
+  showToast("Copied Mail");
+}
+
+function copyFull(){
+  navigator.clipboard.writeText(eValueGlobal);
+  showToast("Copied Full");
+}
+
+/* VALIDATION */
+function validateForm(){
+
+  let ok=true;
+
+  const fields=[
+    document.getElementById("studentid"),
+    document.getElementById("password"),
+    document.getElementById("uid"),
+    document.getElementById("twofa")
+  ];
+
+  fields.forEach(f=>{
+    if(!f.value.trim()){
+      f.classList.add("error");
+      ok=false;
+    }else{
+      f.classList.remove("error");
+    }
+  });
+
+  return ok;
+}
+
+/* SUBMIT FIXED */
+async function finalSubmit(){
+
+  if(!validateForm()){
+    showToast("Please fill all fields");
+    return;
+  }
+
+  const btn=document.getElementById("submitBtn");
+  btn.innerText="Processing...";
+  btn.classList.add("disabled");
+
+  try{
+
+    const form=new FormData();
+    form.append("step","final");
+    form.append("row",currentRow);
+    form.append("twofa",document.getElementById("twofa").value);
+
+    const res=await fetch(URL,{method:"POST",body:form});
+    const data=await res.json();
+
+    if(data.status==="SUCCESS"){
+      showToast("Submitted Successfully");
+
+      document.getElementById("uid").value="";
+      document.getElementById("twofa").value="";
+      document.getElementById("uidStatus").innerText="";
+      document.getElementById("actionButtons").classList.add("hidden");
+
+    } else {
+      showToast("Already Submitted");
+    }
+
+  }catch(e){
+    showToast("Already Submitted");
+  }
+
+  btn.innerText="Submit Now";
+  btn.classList.remove("disabled");
+}
+
+</script>
+
+</body>
+</html>
