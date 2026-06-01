@@ -244,7 +244,7 @@ async function verifyUID(uid){
     const data=await res.json();
 
     if(data.status==="ALREADY"){
-      document.getElementById("uidStatus").innerText="❌ Already Submitted";
+      document.getElementById("uidStatus").innerText="⚠️ Error 🔴 Dublicate Entry ❌";
       showToast("Already Submitted");
       return;
     }
