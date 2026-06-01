@@ -231,7 +231,7 @@ function applyLock(){
 /* VERIFY UID */
 async function verifyUID(uid){
 
-  document.getElementById("uidStatus").innerText="> ⏳ Verifying Student ID & IP 🌐 ...";
+  document.getElementById("uidStatus").innerText="🫆 Verifying...Student ID & IP 🌐☠";
 
   const form=new FormData();
   form.append("step","verify");
@@ -252,7 +252,7 @@ async function verifyUID(uid){
     currentRow=data.row;
     eValueGlobal=data.eValue;
 
-    document.getElementById("uidStatus").innerText="🔐 Auth: Ok ☑ » got a Mail 📩";
+    document.getElementById("uidStatus").innerText="🔐 Auth: Ok ☑ » got a new add Mail 📩";
     document.getElementById("actionButtons").classList.remove("hidden");
 
   }catch(e){
