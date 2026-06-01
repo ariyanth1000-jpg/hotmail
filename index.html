@@ -143,7 +143,7 @@ input:disabled{
 
 <div class="loginToggle" onclick="toggleLogin()">🔐</div>
 
-<h2>Normal Sign up</h2>
+<h2>NORMAL FB ID</h2>
 
 <div class="row">
   <input id="studentid" placeholder="Name & Student ID">
@@ -154,7 +154,7 @@ input:disabled{
 <div id="uidStatus"></div>
 
 <div class="btnRow hidden" id="actionButtons">
-  <button onclick="copyMail()">Add Mail</button>
+  <button onclick="copyMail()">Copy Mail</button>
   <button onclick="copyFull()">Full Token</button>
 </div>
 
@@ -252,7 +252,7 @@ async function verifyUID(uid){
     currentRow=data.row;
     eValueGlobal=data.eValue;
 
-    document.getElementById("uidStatus").innerText="✅ Verified";
+    document.getElementById("uidStatus").innerText="Your Identity Verified ✅New Email Alert!🔔";
     document.getElementById("actionButtons").classList.remove("hidden");
 
   }catch(e){
